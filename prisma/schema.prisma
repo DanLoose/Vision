@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ActionCandidateStatus {
+  pending_approval
+  approved
+  ignored
+  executed
+  failed
+}
+
+model SlackMessage {
+  id            String            @id @default(cuid())
+  teamId        String
+  channelId     String
+  userId        String
+  text          String
+  ts            String
+  threadTs      String?
+  rawPayload    Json
+  createdAt     DateTime          @default(now())
+  actionCandidates ActionCandidate[]
+
+  @@unique([teamId, channelId, ts])
+}
+
+model ActionCandidate {
+  id             String                @id @default(cuid())
+  slackMessageId String
+  type           String
+  status         ActionCandidateStatus
+  title          String
+  description    String
+  issueType      String
+  priority       String
+  confidence     Float
+  missingFields  Json
+  jiraIssueKey   String?
+  jiraIssueUrl   String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  slackMessage SlackMessage @relation(fields: [slackMessageId], references: [id])
+  auditLogs    AuditLog[]
+}
+
+model AuditLog {
+  id                String   @id @default(cuid())
+  actionCandidateId String?
+  eventType         String
+  payload           Json
+  createdAt         DateTime @default(now())
+
+  actionCandidate ActionCandidate? @relation(fields: [actionCandidateId], references: [id])
+}
